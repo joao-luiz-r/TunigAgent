@@ -1,0 +1,18 @@
+{
+  "name": "tuning-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agente de tuning SQL Server com LLM DeepSeek",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "start": "npm run start --workspace server",
+    "build:client": "npm run build --workspace client",
+    "preview:client": "npm run preview --workspace client",
+    "test": "npm run test --workspace server"
+  }
+}

@@ -84,10 +84,12 @@ export function analyzeSql(sqlText) {
 
 export function extractDatabaseAndTable(sqlText) {
   const text = String(sqlText || '');
-  const match = text.match(/from\s+\[?(\w[\w.$.]*)\]?\.(\[\w+\]|\w+)\s*\(?\s*\w+\)?\s*/i);
+  const match = text.match(
+    /\bfrom\s+(?:with\s*\(\s*)?((?:\[[^\]]+\]|[a-zA-Z_@#][\w$@#]*)(?:\.(?:\[[^\]]+\]|[a-zA-Z_@#][\w$@#]*)){0,2})/i,
+  );
   if (!match) return { database: null, table: null };
-  const parts = match[1].split('.');
-  const database = parts.length > 1 ? parts[0] : null;
-  const table = (match[2] || '').replace(/[[\]]/g, '');
+  const parts = (match[1].match(/\[[^\]]+\]|[a-zA-Z_@#][\w$@#]*/g) || []).map((part) => part.replace(/[[\]]/g, ''));
+  const table = parts[parts.length - 1] ?? null;
+  const database = parts.length > 2 ? parts[0] : null;
   return { database, table };
 }

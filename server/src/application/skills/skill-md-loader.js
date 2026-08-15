@@ -36,6 +36,7 @@ export function skillFromMarkdown(source, { sourceName = 'skill.md' } = {}) {
     detectionRules: buildDetectionRules(name, attributes, sections),
     recommendationTemplate: sections.recomendacao || attributes.recommendationTemplate || null,
     pattern,
+    keywords: attributes.keywords || [],
     source: attributes.source || 'fixed',
     version: attributes.version || 1,
     enabled: attributes.enabled !== false,

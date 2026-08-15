@@ -3,6 +3,13 @@ name: key_lookup_elimination
 description: Identifica operações de Key Lookup no plano de execução e recomenda índices de cobertura (INCLUDE) para eliminá-las.
 tools:
   - get_execution_plan
+  - get_table_indexes
+keywords:
+  - key lookup
+  - indice de cobertura
+  - covering index
+  - eliminar key lookup
+  - lookup no plano
 ---
 
 # Skill: key_lookup_elimination

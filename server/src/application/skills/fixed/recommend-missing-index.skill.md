@@ -4,6 +4,12 @@ description: Identifica índices de cobertura que faltam comparando a consulta c
 tools:
   - get_table_indexes
   - get_query_text
+keywords:
+  - missing index
+  - indice ausente
+  - sugestao de indice
+  - indice que falta
+  - indice recomendado
 ---
 
 # Skill: recommend_missing_index

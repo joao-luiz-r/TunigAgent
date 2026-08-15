@@ -7,7 +7,10 @@ const TOOL_KEYWORDS = [
   { keywords: ['schema', 'tabela', 'coluna'], toolName: 'get_table_schema' },
   { keywords: ['indice', 'índice', 'missing', 'ausente'], toolName: 'get_table_indexes' },
   { keywords: ['texto', 'query', 'consulta'], toolName: 'get_query_text' },
-  { keywords: ['wait', 'espera', 'estat'], toolName: 'get_wait_stats' },
+  { keywords: ['wait', 'espera'], toolName: 'get_wait_stats' },
+  { keywords: ['estatistica', 'estatísticas', 'statistics', 'atualizacao das estatisticas', 'modificacoes de linhas'], toolName: 'get_table_statistics' },
+  { keywords: ['chave estrangeira', 'foreign key', 'fk'], toolName: 'get_foreign_keys' },
+  { keywords: ['funcao', 'função', 'udf', 'inlineable', 'is_inlineable', 'procedimento'], toolName: 'get_object_metadata' },
 ];
 
 export class SkillGenerator {

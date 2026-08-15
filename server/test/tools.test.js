@@ -11,6 +11,9 @@ const EXPECTED_TOOLS = [
   'get_table_schema',
   'get_query_text',
   'get_wait_stats',
+  'get_table_statistics',
+  'get_foreign_keys',
+  'get_object_metadata',
 ];
 
 function buildRegistry() {
@@ -93,6 +96,46 @@ test('get_wait_stats exclui wait types irrelevantes e respeita TOP', () => {
   assert.match(script, /USE \[DB\]/);
   assert.match(script, /WHERE wait_type NOT IN \('SLEEP_TASK'/);
   assert.ok(script.includes('ORDER BY wait_time_ms DESC;'));
+});
+
+test('get_table_statistics gera script com sys.dm_db_stats_properties', () => {
+  const registry = buildRegistry();
+  const script = registry.get('get_table_statistics').buildScript({
+    database: 'DB',
+    schema: 'dbo',
+    table: 'Pedidos',
+  });
+  assert.match(script, /USE \[DB\]/);
+  assert.match(script, /FROM sys\.stats AS s/);
+  assert.match(script, /dm_db_stats_properties/);
+  assert.match(script, /OBJECT_ID\('dbo\.Pedidos'\)/);
+  assert.match(script, /st\.modification_counter AS modificacoes/);
+});
+
+test('get_foreign_keys gera script com mapeamento filho<->pai', () => {
+  const registry = buildRegistry();
+  const script = registry.get('get_foreign_keys').buildScript({
+    database: 'DB',
+    schema: 'dbo',
+    table: 'Pedidos',
+  });
+  assert.match(script, /FROM sys\.foreign_keys AS fk/);
+  assert.match(script, /sys\.foreign_key_columns/);
+  assert.match(script, /coluna_filha/);
+  assert.match(script, /coluna_pai/);
+  assert.match(script, /OBJECT_ID\('dbo\.Pedidos'\)/);
+});
+
+test('get_object_metadata gera script com is_inlineable', () => {
+  const registry = buildRegistry();
+  const script = registry.get('get_object_metadata').buildScript({
+    database: 'DB',
+    schema: 'dbo',
+    object: 'CalculaDesconto',
+  });
+  assert.match(script, /FROM sys\.sql_modules AS m/);
+  assert.match(script, /m\.is_inlineable AS inlineavel/);
+  assert.match(script, /o\.name = 'CalculaDesconto'/);
 });
 
 test('parseTabularResult parseia tabela delimitada por |', () => {

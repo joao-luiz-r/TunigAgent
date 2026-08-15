@@ -4,6 +4,12 @@ description: Cria ou melhora índices de forma assertiva, verificando os índice
 tools:
   - get_table_indexes
   - get_query_text
+keywords:
+  - criar indice
+  - create index
+  - criar um indice de cobertura
+  - indice com include
+  - criar indice novo
 ---
 
 # Skill: create_assertive_index

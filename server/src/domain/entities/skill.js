@@ -7,6 +7,7 @@ export class Skill {
     detectionRules = null,
     recommendationTemplate = null,
     pattern = null,
+    keywords = [],
     source = 'fixed',
     version = 1,
     enabled = true,
@@ -19,6 +20,7 @@ export class Skill {
     this.systemPrompt = systemPrompt;
     this.toolsRequired = toolsRequired;
     this.detectionRules = detectionRules;
+    this.keywords = keywords;
     this.recommendationTemplate = recommendationTemplate;
     this.pattern = pattern;
     this.source = source;
@@ -49,6 +51,7 @@ export function toDocument(skill) {
     detectionRules: skill.detectionRules,
     recommendationTemplate: skill.recommendationTemplate,
     pattern: skill.pattern,
+    keywords: skill.keywords,
     source: 'factory',
     version: skill.version,
     enabled: skill.enabled,
@@ -66,6 +69,7 @@ export function fromDocument(document) {
     detectionRules: document.detectionRules || null,
     recommendationTemplate: document.recommendationTemplate || null,
     pattern: document.pattern || null,
+    keywords: document.keywords || [],
     source: 'factory',
     version: document.version || 1,
     enabled: document.enabled !== false,

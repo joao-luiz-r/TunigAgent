@@ -3,6 +3,16 @@ name: refresh_stale_statistics
 description: Detecta estatísticas desatualizadas (staleness) que geram planos ruins e recomenda a atualização com FULLSCAN ou SAMPLE quando apropriado.
 tools:
   - get_table_schema
+  - get_execution_plan
+  - get_query_text
+  - get_table_statistics
+keywords:
+  - stale statistics
+  - estatisticas desatualizadas
+  - update statistics
+  - cardinalidade errada
+  - estatisticas antigas
+  - criar estatisticas
 ---
 
 # Skill: refresh_stale_statistics
@@ -13,7 +23,7 @@ Use quando o plano mostra estimativas de cardinalidade muito divergentes das lin
 
 ## Instruções
 
-Sua missão é identificar estatísticas desatualizadas que degradam os planos de execução. Verifique a data da última atualização, o volume de modificações de linhas (row modifications) e os sinais no plano (estimativas vs. linhas reais muito divergentes). Recomende `UPDATE STATISTICS` com FULLSCAN para tabelas pequenas/médias ou SAMPLE para tabelas grandes, e avalie configurar o limiar de desatualização (`AUTO_UPDATE_STATISTICS`). Use a ferramenta `get_table_schema`. Conclua com os comandos de atualização recomendados.
+Sua missão é identificar estatísticas desatualizadas que degradam os planos de execução. Verifique a data da última atualização, o volume de modificações de linhas (row modifications) e os sinais no plano (estimativas vs. linhas reais muito divergentes). Use a ferramenta `get_table_statistics` para inspecionar todas as estatísticas da tabela (última atualização, linhas, linhas amostradas e `modification_counter`), e `get_table_schema` para o contexto das colunas. Recomende `UPDATE STATISTICS` com FULLSCAN para tabelas pequenas/médias ou SAMPLE para tabelas grandes, e avalie configurar o limiar de desatualização (`AUTO_UPDATE_STATISTICS`). Conclua com os comandos de atualização recomendados.
 
 ## Padrão ANTES/DEPOIS
 

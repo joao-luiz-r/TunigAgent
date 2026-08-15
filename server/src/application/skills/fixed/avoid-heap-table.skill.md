@@ -3,6 +3,13 @@ name: avoid_heap_table
 description: Detecta tabelas sem índice clustered (heaps) e recomenda a criação de um clustered index para eliminar table scans, forwarding e fragmentação.
 tools:
   - get_table_schema
+keywords:
+  - tabela heap
+  - heap table
+  - sem clustered
+  - sem indice clustered
+  - forwarding record
+  - heap com forwarding
 ---
 
 # Skill: avoid_heap_table

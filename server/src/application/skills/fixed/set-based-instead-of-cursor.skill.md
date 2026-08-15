@@ -3,6 +3,13 @@ name: set_based_instead_of_cursor
 description: Detecta loops/cursors que processam linha a linha e recomenda reescrever como operação baseada em conjuntos (set-based).
 tools:
   - get_query_text
+keywords:
+  - cursor
+  - linha a linha
+  - set based
+  - while update
+  - loop por linha
+  - operacao linha a linha
 ---
 
 # Skill: set_based_instead_of_cursor
@@ -14,6 +21,8 @@ Use quando uma procedure ou consulta usa cursor ou loop WHILE para atualizar/ins
 ## Instruções
 
 Sua missão é identificar processos que percorrem linha a linha (cursors ou WHILE) para realizar operações que podem ser expressas em um único comando baseado em conjuntos. Analise o texto da procedure/consulta recuperado e reescreva usando UPDATE/INSERT/MERGE set-based, preservando a lógica de negócio (joins, filtros e a mesma semântica). Quando o processamento sequencial for genuinamente necessário, avalie alternativas como CTE, `ROW_NUMBER` ou operações em lote (batches). Use a ferramenta `get_query_text`. Conclua com a reescrita.
+
+**REDIRECIONAMENTO PARA CASO ESPECÍFICO:** Se o cursor/loop estiver executando um `DELETE` ou `UPDATE` cujo conjunto de linhas é definido com base em OUTRA tabela (via subconsulta, condição de junção ou join), NÃO reescreva aqui de forma genérica: acione `[SKILL_HANDOFF:use_join_in_delete_update]` para que essa skill aplique a sintaxe específica do SQL Server com `JOIN` no `DELETE`/`UPDATE`. Para demais operações de atualização/inserção baseadas em conjuntos, siga a reescrita set-based normal.
 
 ## Padrão ANTES/DEPOIS
 

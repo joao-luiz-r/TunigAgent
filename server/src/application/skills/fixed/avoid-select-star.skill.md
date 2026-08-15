@@ -3,6 +3,12 @@ name: avoid_select_star
 description: Detecta consultas com SELECT * e recomenda a listagem explícita de colunas para reduzir I/O e permitir índices de cobertura.
 tools:
   - get_query_text
+  - get_table_schema
+keywords:
+  - select *
+  - seleciona todas as colunas
+  - listar todas as colunas
+  - todas as colunas da tabela
 ---
 
 # Skill: avoid_select_star

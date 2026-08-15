@@ -151,13 +151,74 @@ Este documento é então salvo na coleção `skills_library` do MongoDB.
 - `get_table_schema`
 - `get_query_text`
 - `get_wait_stats`
+- `get_table_indexes`
 
 ### 7.2. Skills de Diagnóstico (fixas, embutidas)
 
-- `ensure_fk_indexes`
-- `detect_implicit_conversion`
-- `key_lookup_elimination`
-- `avoid_select_star`
+**Índices e operadores de acesso:**
+- `create_assertive_index` – criação/melhoria objetiva de índices (pode ser acionada por handoff)
+- `recommend_missing_index` – aproveita sugestões do otimizador (missing index)
+- `key_lookup_elimination` – elimina Key Lookup com índice de cobertura
+- `avoid_heap_table` – tabelas heap sem índice clustered
+- `avoid_select_star` – evita `SELECT *`
+- `avoid_varchar_max` – evita `VARCHAR(MAX)` quando o tamanho real é limitado
+- `ensure_fk_indexes` – índices sobre colunas de chave estrangeira
+
+**Predicados não-sargáveis e conversões:**
+- `avoid_non_sargable_predicate` – função/aritmética na coluna do `WHERE`
+- `avoid_wildcard_prefix` – `LIKE '%texto'` com curinga no início
+- `detect_implicit_conversion` – conversão implícita na coluna (WHERE/JOIN)
+- `avoid_isnull_in_where` – `ISNULL(coluna, valor)` no `WHERE`
+- `avoid_dynamic_search_condition` – filtros opcionais (`@param IS NULL OR`)
+- `avoid_not_in_with_nulls` – `NOT IN` com nulos
+- `handle_nulls_in_aggregate_expressions` – nulos em expressões agregadas
+
+**Reescrita de consultas (EXISTS/joins):**
+- `replace_join_with_exists` – JOIN usado só para filtrar → `EXISTS`
+- `replace_join_distinct_with_exists` – `JOIN + DISTINCT` → `EXISTS`
+- `replace_left_join_isnull_with_not_exists` – anti-join (`LEFT JOIN ... IS NULL`) → `NOT EXISTS`
+- `replace_subselect_with_join` – subconsulta correlacionada → `JOIN`
+- `replace_or_between_columns_with_union_all` – `OR` entre colunas → `UNION ALL`
+- `set_based_instead_of_cursor` – cursor/WHILE → operações set-based
+- `use_join_in_delete_update` – `DELETE`/`UPDATE` com `JOIN` (sintaxe SQL Server)
+- `consolidate_multiple_updates_with_case` – múltiplos UPDATEs na mesma tabela → um `UPDATE` com `CASE`
+- `encapsulate_case_with_correlated_subquery` – `CASE (SELECT ...)` → subconsulta encapsulada
+- `optimize_repetitive_case_with_cross_apply` – `CASE` repetido no SELECT/WHERE → `CROSS APPLY`
+- `use_apply_for_multiple_aggregates` – múltiplas subconsultas agregadas → `OUTER APPLY`
+- `extract_fixed_subquery_to_variable` – subconsulta fixa repetida → variável
+- `choose_temp_table_or_table_variable` – escolha entre `@tabela` e `#tabela`
+- `avoid_large_temp_tables` – temporárias grandes/`SELECT * INTO #Temp`
+- `cache_string_split_with_temp_table` – `STRING_SPLIT` repetido → cache em temporária
+
+**Funções de janela (window functions):**
+- `use_aggregate_over_partition` – agregado por grupo → `SUM() OVER (PARTITION BY)`
+- `use_row_number_for_top_n_per_group` – "top N por grupo" → `ROW_NUMBER()`
+- `use_rank_functions_for_numbering` – numeração manual → `RANK()`/`DENSE_RANK()`/`ROW_NUMBER()`
+- `use_lag_for_previous_row` – linha anterior → `LAG()`
+- `use_lead_for_next_row` – linha seguinte → `LEAD()`
+- `use_sum_over_for_running_total` – total acumulado → `SUM() OVER (ROWS UNBOUNDED PRECEDING)`
+- `use_window_functions_for_sliding_window` – médias móveis/janelas deslizantes → `ROWS BETWEEN`
+
+**Ordenação:**
+- `always_use_order_by_for_guaranteed_order` – adiciona `ORDER BY` quando a ordem importa
+- `avoid_unnecessary_order_by` – remove `ORDER BY` desnecessário (ordenação na aplicação)
+
+**DML e transações:**
+- `use_output_clause_for_atomic_operations` – captura dados modificados com `OUTPUT`
+- `avoid_unnecessary_foreign_key_updates` – evita `UPDATE` desnecessário de colunas FK
+- `optimize_long_running_transaction` – transações longas e bloqueios
+
+**Plano de execução, estatísticas e UDFs:**
+- `refresh_stale_statistics` – estatísticas desatualizadas
+- `handle_parameter_sniffing` – parameter sniffing (`OPTION (RECOMPILE)`, `OPTIMIZE FOR`)
+- `avoid_row_goal_in_exists` – row goal no `EXISTS` (`TOP`/`ORDER BY` na subconsulta)
+- `avoid_multiple_table_scans_with_case` – múltiplas leituras da mesma tabela → `CASE`
+- `ensure_scalar_udf_inlining` – habilita inlining de scalar UDFs
+- `prefer_string_agg_over_for_xml` – concatenação com `FOR XML PATH` → `STRING_AGG`
+- `prefer_union_all_over_union` – `UNION` sem necessidade de eliminar duplicatas → `UNION ALL`
+
+**Genérica:**
+- `general_tuning` – diagnóstico amplo quando nenhuma técnica específica se aplica
 
 ### 7.3. Skill Factory (meta-skill especial)
 

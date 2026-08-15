@@ -1,142 +1,103 @@
 export const AUTO_SKILL_NAME = 'auto';
 
-const SKILL_KEYWORDS = {
-  avoid_select_star: [
-    'select *',
-    'select star',
-    'todas as colunas',
-    'listar colunas',
-    'colunas desnecessarias',
-    'colunas excedentes',
-  ],
-  detect_implicit_conversion: [
-    'conversao implicita',
-    'conversao de tipo',
-    'tipo diferente',
-    'tipos diferentes',
-    'incompatibilidade de tipo',
-    'convert_implicit',
-    'coluna varchar',
-    'coluna nvarchar',
-  ],
-  ensure_fk_indexes: [
-    'chave estrangeira',
-    'foreign key',
-    'fk sem indice',
-    'indice na fk',
-    'join lento',
-    'exclusao de registro pai',
-    'table scan em join',
-  ],
-  key_lookup_elimination: [
-    'key lookup',
-    'lookup',
-    'indice de cobertura',
-    'colunas no include',
-    'covering index',
-    'clustered index seek',
-  ],
-  avoid_non_sargable_predicate: [
-    'nao sargavel',
-    'non sargable',
-    'funcao na coluna',
-    'aritmetica na coluna',
-    'year(',
-    'coluna /',
-    'expressao na coluna',
-    'operacao na coluna',
-  ],
-  avoid_wildcard_prefix: [
-    'like %',
-    'curinga no inicio',
-    'wildcard prefix',
-    'busca por texto completo',
-    'fulltext',
-  ],
-  avoid_heap_table: [
-    'tabela heap',
-    'sem clustered',
-    'sem indice clustered',
-    'heap table',
-    'forwarding',
-    'clustered index ausente',
-  ],
-  recommend_missing_index: [
-    'indice ausente',
-    'missing index',
-    'indices ausentes',
-    'sugestao de indice',
-  ],
-  create_assertive_index: [
-    'criar indice',
-    'criar um indice',
-    'criar indice de cobertura',
-    'criar indices',
-    'novo indice',
-    'indice para melhorar',
-    'improve index',
-    'add index',
-    'sugestao de criar indice',
-    'cobrir a consulta',
-    'cobertura de consulta',
-    'expandir indice',
-    'acrescentar na chave',
-    'include',
-  ],
-  refresh_stale_statistics: [
-    'estatistica desatualizada',
-    'statistics desatualizada',
-    'stale statistics',
-    'update statistics',
-    'cardinalidade errada',
-    'row modification',
-  ],
-  set_based_instead_of_cursor: [
-    'cursor',
-    'loop linha a linha',
-    'linha a linha',
-    'set based',
-    'baseado em conjuntos',
-    'while + update',
-  ],
-};
+const TOKEN_REGEX = /[a-z0-9*#@_]+/g;
+
+export function normalizeMessage(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function tokenize(text) {
+  return normalizeMessage(text).match(TOKEN_REGEX) || [];
+}
+
+export function buildSkillSignatures(skills) {
+  const candidates = skills.filter(
+    (skill) => skill.enabled && !skill.isFactory && skill.name !== 'general_tuning',
+  );
+
+  const signatures = [];
+  for (const skill of candidates) {
+    const terms = (skill.keywords || [])
+      .map((keyword) => tokenize(keyword))
+      .filter((tokens) => tokens.length > 0)
+      .map((tokens) => ({ tokens, weight: tokens.length }));
+    signatures.push({ name: skill.name, terms: terms.slice(0, 60) });
+  }
+  return signatures;
+}
+
+function hasSubsequence(tokens, subsequence) {
+  for (let i = 0; i + subsequence.length <= tokens.length; i += 1) {
+    let matches = true;
+    for (let j = 0; j < subsequence.length; j += 1) {
+      if (tokens[i + j] !== subsequence[j]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+  return false;
+}
+
+function scoreMessage(tokens, terms) {
+  let score = 0;
+  let matchedPhrase = false;
+  for (const { tokens: term, weight } of terms) {
+    if (hasSubsequence(tokens, term)) {
+      score += weight;
+      if (term.length >= 2) matchedPhrase = true;
+    }
+  }
+  return { score, matchedPhrase };
+}
+
+const MIN_SCORE = 2.0;
 
 export class SkillMatcher {
   constructor({ skillRegistry }) {
     this.skillRegistry = skillRegistry;
+    this._signatures = null;
+    this._signatureVersion = -1;
+  }
+
+  getSignatures() {
+    const skills = this.skillRegistry.all();
+    const version = skills.length;
+    if (!this._signatures || this._signatureVersion !== version) {
+      this._signatures = buildSkillSignatures(skills);
+      this._signatureVersion = version;
+    }
+    return this._signatures;
   }
 
   match(message) {
-    const text = this.normalize(message);
+    const tokens = tokenize(message);
+    if (tokens.length === 0) return null;
+
+    const signatures = this.getSignatures();
     let bestName = null;
     let bestScore = 0;
+    let bestHasPhrase = false;
 
-    for (const [skillName, keywords] of Object.entries(SKILL_KEYWORDS)) {
-      const score = keywords.reduce((acc, keyword) => (text.includes(keyword) ? acc + 1 : acc), 0);
-      if (score > bestScore) {
+    for (const signature of signatures) {
+      const { score, matchedPhrase } = scoreMessage(tokens, signature.terms);
+      if (score > bestScore || (score === bestScore && matchedPhrase && !bestHasPhrase)) {
         bestScore = score;
-        bestName = skillName;
+        bestHasPhrase = matchedPhrase;
+        bestName = signature.name;
       }
     }
 
-    for (const skill of this.skillRegistry.all()) {
-      if (skill.source !== 'factory' || !skill.detectionRules) continue;
-      const trigger = this.normalize(skill.detectionRules.trigger || '');
-      const words = trigger.split(/\s+/).filter((word) => word.length > 3);
-      const score = words.reduce((acc, word) => (text.includes(word) ? acc + 1 : acc), 0);
-      if (score > bestScore) {
-        bestScore = score;
-        bestName = skill.name;
-      }
-    }
-
-    return bestName ? this.skillRegistry.get(bestName) : null;
+    if (bestName === null || bestScore < MIN_SCORE || !bestHasPhrase) return null;
+    return this.skillRegistry.get(bestName);
   }
 
   normalize(message) {
-    return String(message || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+    return normalizeMessage(message);
   }
 }

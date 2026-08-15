@@ -4,6 +4,13 @@ description: Detecta colunas de chave estrangeira sem índice de suporte, que ge
 tools:
   - get_table_schema
   - get_table_indexes
+  - get_foreign_keys
+keywords:
+  - chave estrangeira sem indice
+  - fk sem indice
+  - indice na chave estrangeira
+  - foreign key sem indice
+  - join lento por falta de indice
 ---
 
 # Skill: ensure_fk_indexes
@@ -14,7 +21,7 @@ Use quando um join ou uma operação de exclusão/atualização de registro pai 
 
 ## Instruções
 
-Sua missão é verificar se as colunas de chave estrangeira possuem índices de suporte. Analise o schema das tabelas (colunas, tipos) com `get_table_schema` e os índices existentes com `get_table_indexes`. Quando uma coluna que participa de uma FK não possui índice cobrindo-a, recomende explicitamente a criação de um índice na coluna da FK. Conclua sempre com uma recomendação objetiva e, quando possível, com o script `CREATE INDEX` correspondente.
+Sua missão é verificar se as colunas de chave estrangeira possuem índices de suporte. Identifique as colunas que participam de FKs com `get_foreign_keys` (tabela filha/pai e colunas envolvidas), analise o schema das tabelas (colunas, tipos) com `get_table_schema` e os índices existentes com `get_table_indexes`. Quando uma coluna que participa de uma FK não possui índice cobrindo-a, recomende explicitamente a criação de um índice na coluna da FK. Conclua sempre com uma recomendação objetiva e, quando possível, com o script `CREATE INDEX` correspondente.
 
 ## Padrão ANTES/DEPOIS
 

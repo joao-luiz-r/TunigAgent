@@ -6,6 +6,8 @@ tools:
   - get_query_text
   - get_wait_stats
   - get_table_indexes
+keywords:
+  - analise geral
 ---
 
 # Skill: general_tuning

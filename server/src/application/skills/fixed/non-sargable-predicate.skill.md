@@ -4,6 +4,13 @@ description: Detecta predicados não-sargáveis (função ou aritmética na colu
 tools:
   - get_query_text
   - get_table_indexes
+keywords:
+  - nao sargavel
+  - non sargable
+  - funcao na coluna
+  - funcao no where
+  - aritmetica na coluna
+  - year no where
 ---
 
 # Skill: avoid_non_sargable_predicate
@@ -15,6 +22,12 @@ Use quando uma função ou expressão aritmética é aplicada diretamente na col
 ## Instruções
 
 Sua missão é identificar predicados não-sargáveis: quando uma função ou expressão aritmética é aplicada diretamente na COLUNA dentro do WHERE, o SQL Server não consegue usar o índice daquela coluna. Reescreva a expressão para operar sobre o VALOR em vez da coluna, preservando exatamente o mesmo resultado e ordenação.
+
+**REDIRECIONAMENTO PARA CASOS ESPECÍFICOS:** Antes de aplicar a reescrita genérica, verifique se o predicado corresponde a um padrão coberto por outra skill dedicada:
+
+1. Se o padrão for `WHERE (@param IS NULL OR coluna = @param)` (filtros opcionais / dynamic search), NÃO reescreva aqui: acione `[SKILL_HANDOFF:avoid_dynamic_search_condition]` para que essa skill aplique a solução específica (sp_executesql ou OPTION (RECOMPILE)).
+2. Se o predicado aplicar `ISNULL(coluna, valor)` diretamente na coluna dentro do WHERE, NÃO reescreva aqui: acione `[SKILL_HANDOFF:avoid_isnull_in_where]` para que essa skill aplique a reescrita equivalente com OR + IS NULL.
+3. Caso contrário (função, aritmética ou expressão diretamente na coluna), prossiga com a reescrita sargável genérica abaixo.
 
 Antes de concluir, verifique os índices existentes da tabela:
 

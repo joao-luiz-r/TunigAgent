@@ -110,3 +110,67 @@ test('INTERVIEW_STEPS segue o roteiro fixo da especificação', () => {
   );
   assert.equal(INTERVIEW_STEPS[4].optional, true);
 });
+
+class FailingLlm extends MockLlm {
+  async chatJson() {
+    throw new Error('LLM fora do ar');
+  }
+}
+
+test('generate usa fallback quando o LLM falha', async () => {
+  const llm = new FailingLlm();
+  const registry = new ToolRegistry();
+  registerAllTools(registry);
+  const generator = new SkillGenerator({ llm, toolRegistry: registry });
+
+  const skill = await generator.generate({
+    name: 'tecnica fallback',
+    trigger: 'quando aparece Y',
+    dataNeeded: 'preciso do schema da tabela',
+    recommendation: 'criar indice',
+    script: '-- script x',
+  });
+  assert.equal(skill.name, 'tecnica fallback');
+  assert.ok(skill.systemPrompt.length > 0);
+  assert.ok(skill.toolsRequired.includes('get_table_schema'));
+  assert.match(skill.systemPrompt, /tecnica fallback/);
+});
+
+test('geração dinâmica confirma manualmente sete nome mesmo com LLM mock', async () => {
+  const llm = new MockLlm();
+  const registry = new ToolRegistry();
+  registerAllTools(registry);
+  const generator = new SkillGenerator({ llm, toolRegistry: registry });
+  const skill = await generator.generate({
+    name: '   ',
+    trigger: 'X',
+  });
+  assert.equal(skill.name, 'nova_skill');
+});
+
+test('detector reconhece variações de pedido de criação de skill', () => {
+  const detector = new SkillFactoryDetector();
+  assert.ok(detector.isCreationRequest('quero criar uma skill para detectar X'));
+  assert.ok(detector.isCreationRequest('Quero criar uma nova skill'));
+  assert.ok(detector.isCreationRequest('gostaria de ensinar uma nova tecnica de tuning'));
+  assert.ok(detector.isCreationRequest('skill factory'));
+  assert.ok(detector.isCreationRequest('transformar essa correção em uma skill'));
+  assert.ok(!detector.isCreationRequest('minha query está lenta'));
+  assert.ok(!detector.isCreationRequest('qual a capital do brasil?'));
+});
+
+test('detector não acusa correção manual em mensagens sem melhoria', () => {
+  const detector = new SkillFactoryDetector();
+  assert.ok(!detector.detect('ainda está lenta, preciso de ajuda'));
+  assert.ok(!detector.detect('vou dropar o índice amanhã'));
+});
+
+test('InterviewController registra resposta mesmo para step inexistente', async () => {
+  const { harness, sessionManager } = buildHarnessEnvironment();
+  const session = sessionManager.create(FACTORY_SKILL_NAME);
+  await harness.prepareFactorySession(session);
+  session.interview.currentIndex = -1;
+  const controller = harness.interviewController;
+  controller.recordAnswer(session, 'x');
+  assert.deepEqual(session.interview.answers, {});
+});

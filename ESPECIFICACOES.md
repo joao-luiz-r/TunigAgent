@@ -152,6 +152,9 @@ Este documento é então salvo na coleção `skills_library` do MongoDB.
 - `get_query_text`
 - `get_wait_stats`
 - `get_table_indexes`
+- `get_table_statistics` – metadados de estatísticas (`sys.stats` + `sys.dm_db_stats_properties`)
+- `get_foreign_keys` – chaves estrangeiras da tabela (filha/pai + colunas mapeadas)
+- `get_object_metadata` – metadados de objetos (`sys.sql_modules`: `is_inlineable`, SCHEMABINDING, definição)
 
 ### 7.2. Skills de Diagnóstico (fixas, embutidas)
 
@@ -232,7 +235,9 @@ Este documento é então salvo na coleção `skills_library` do MongoDB.
 - **POST `/api/agent/act`**: Envia mensagem do usuário.
 - **GET `/api/agent/state/:sessionId`**: Retorna o estado atual (incluindo, se for o caso, a pergunta atual da entrevista da Skill Factory).
 - **POST `/api/agent/feedback`**: Envia resultado de ferramenta ou resposta a uma pergunta da entrevista (campo `userResult` pode conter a resposta do usuário à pergunta da Skill Factory).
-- **POST `/api/skill/create`** (opcional, pode ser integrado ao fluxo de `act`): Permite salvar uma nova skill gerada. Normalmente, a Skill Factory já faz isso internamente.
+- **POST `/api/skills/create`** (opcional, pode ser integrado ao fluxo de `act`): Permite salvar uma nova skill gerada. Normalmente, a Skill Factory já faz isso internamente.
+- **GET `/api/skills`**: Lista as skills disponíveis (fixas e dinâmicas habilitadas).
+- **GET `/api/health`**: Health check da API.
 
 ---
 
@@ -270,11 +275,15 @@ O estado `pendingTool` pode ser estendido para incluir `interviewQuestion` quand
 
 Variáveis de ambiente:
 
-- `PORT`
-- `DEEPSEEK_API_KEY`
-- `DEEPSEEK_BASE_URL`
-- `DEEPSEEK_MODEL`
-- `MONGODB_URI`
+- `PORT` — porta da API (padrão `3001`)
+- `DEEPSEEK_API_KEY` — chave da API (OpenRouter ou DeepSeek oficial)
+- `DEEPSEEK_BASE_URL` — Base URL (padrão `https://openrouter.ai/api/v1`; alternativa oficial `https://api.deepseek.com`)
+- `DEEPSEEK_MODEL` — modelo de inferência (padrão do `.env.example`: `deepseek/deepseek-v4-flash-0731`)
+- `MONGODB_URI` — URI do MongoDB (padrão `mongodb://127.0.0.1:27017/tuning_agent`)
+- `MONGODB_MEMORY_FALLBACK` — usa MongoDB embutido em memória se a URI não conectar (padrão `true`)
+- `MAX_CONTEXT_TOKENS` — limite de tokens do contexto do agente (padrão `12000`)
+- `LLM_TIMEOUT_MS` — timeout da chamada à LLM em ms (padrão `120000`)
+- `LLM_MOCK` — `true` apenas para testes locais sem API; padrão `false`
 
 ---
 

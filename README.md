@@ -26,11 +26,13 @@ ESPECIFICACOES.md  Manual de especificação técnica completo
 | Variável | Descrição |
 | :--- | :--- |
 | `PORT` | Porta da API (padrão 3001) |
-| `DEEPSEEK_API_KEY` | Chave da API OpenRouter (obrigatória; header `Authorization: Bearer`) |
-| `DEEPSEEK_BASE_URL` | Base URL (padrão https://openrouter.ai/api/v1) |
-| `DEEPSEEK_MODEL` | Modelo (padrão deepseek/deepseek-v4-flash-0731) |
+| `DEEPSEEK_API_KEY` | Chave da API OpenRouter/DeepSeek (obrigatória; header `Authorization: Bearer`) |
+| `DEEPSEEK_BASE_URL` | Base URL (padrão https://openrouter.ai/api/v1; alternativa oficial https://api.deepseek.com) |
+| `DEEPSEEK_MODEL` | Modelo (padrão do `.env.example`: `deepseek/deepseek-v4-flash-0731`) |
 | `MONGODB_URI` | URI do MongoDB (padrão mongodb://127.0.0.1:27017/tuning_agent) |
 | `MONGODB_MEMORY_FALLBACK` | Usa MongoDB embutido em memória se a URI não conectar (padrão true) |
+| `MAX_CONTEXT_TOKENS` | Limite de tokens do contexto do agente (padrão 12000) |
+| `LLM_TIMEOUT_MS` | Timeout da chamada à LLM em ms (padrão 120000) |
 | `LLM_MOCK` | `true` apenas para testes locais sem API; padrão `false` (LLM real obrigatório) |
 
 ## Execução
@@ -41,6 +43,7 @@ ESPECIFICACOES.md  Manual de especificação técnica completo
 
 ## Endpoints
 
+- `GET /api/health` — health check
 - `POST /api/session/start` — inicia sessão com uma skill
 - `POST /api/agent/act` — envia mensagem do usuário
 - `GET /api/agent/state/:sessionId` — estado atual da sessão

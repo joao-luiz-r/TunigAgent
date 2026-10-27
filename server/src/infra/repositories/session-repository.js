@@ -16,6 +16,7 @@ export class SessionRepository extends BaseRepository {
       {
         $set: {
           skillName: session.skillName,
+          loadedSkills: session.loadedSkills || [],
           status: session.status,
           state: session.state,
           updatedAt: now,

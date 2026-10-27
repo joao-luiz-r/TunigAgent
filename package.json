@@ -13,6 +13,7 @@
     "start": "npm run start --workspace server",
     "build:client": "npm run build --workspace client",
     "preview:client": "npm run preview --workspace client",
-    "test": "npm run test --workspace server"
+    "test": "npm run test --workspace server",
+    "test:coverage": "npm run test:coverage --workspace server"
   }
 }

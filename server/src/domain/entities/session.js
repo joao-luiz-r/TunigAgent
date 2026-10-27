@@ -2,9 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { HarnessState, SessionStatus } from '../enums/harness-state.js';
 
 export class Session {
-  constructor({ sessionId, skillName }) {
+  constructor({ sessionId, skillName, loadedSkills }) {
     this.sessionId = sessionId || randomUUID();
+    // skillName: dica de rota inicial (compat). Não é mais "skill ativa":
+    // qualquer skill pode ser usada sozinha ou em conjunto (ver loadedSkills).
     this.skillName = skillName;
+    this.loadedSkills = Array.isArray(loadedSkills) ? [...loadedSkills] : [];
     this.status = SessionStatus.ACTIVE;
     this.state = HarnessState.IDLE;
     this.history = [];
@@ -48,6 +51,7 @@ export class Session {
     return {
       sessionId: this.sessionId,
       skillName: this.skillName,
+      loadedSkills: [...this.loadedSkills],
       status: this.status,
       state: this.state,
       messages,

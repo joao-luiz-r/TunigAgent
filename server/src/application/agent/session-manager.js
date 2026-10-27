@@ -8,8 +8,8 @@ export class SessionManager {
     this.repository = repository;
   }
 
-  create(skillName) {
-    const session = new Session({ sessionId: randomUUID(), skillName });
+  create(skillName, { loadedSkills } = {}) {
+    const session = new Session({ sessionId: randomUUID(), skillName, loadedSkills });
     this.save(session);
     return session;
   }

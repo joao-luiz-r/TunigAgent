@@ -14,6 +14,7 @@ const EXPECTED_TOOLS = [
   'get_table_statistics',
   'get_foreign_keys',
   'get_object_metadata',
+  'get_skill_details',
 ];
 
 function buildRegistry() {
@@ -36,6 +37,15 @@ test('definitions retorna apenas as tools solicitadas', () => {
     defs.map((d) => d.function.name),
     ['get_execution_plan', 'get_table_schema'],
   );
+});
+
+test('get_skill_details expõe definição para carregamento sob demanda', () => {
+  const registry = buildRegistry();
+  const tool = registry.get('get_skill_details');
+  assert.ok(tool, 'tool get_skill_details deveria estar registrada');
+  const definition = tool.getDefinition();
+  assert.equal(definition.function.name, 'get_skill_details');
+  assert.ok(definition.function.parameters.properties.skills, 'deveria aceitar a lista skills');
 });
 
 test('get_execution_plan gera script SHOWPLAN_XML com a query fornecida', () => {

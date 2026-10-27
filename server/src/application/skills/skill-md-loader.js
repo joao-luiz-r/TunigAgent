@@ -94,16 +94,27 @@ function parsePattern(section) {
 
   const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const grab = (label) => {
-    const match = text.match(new RegExp(`\\*\\*${escapeRegex(label)}:\\*\\*\\s*(.+?)(?:\\n\\n|$)`));
-    return match ? match[1].trim() : undefined;
+    const match = text.match(new RegExp(`\\*\\*${escapeRegex(label)}:\\*\\*\\s*(.+?)(?:\\r?\\n\\r?\\n|$)`));
+    if (match && match[1].trim()) return match[1].trim();
+    const matchHeader = text.match(new RegExp(`\\*\\*${escapeRegex(label)}([^*]+)\\*\\*`));
+    if (matchHeader && matchHeader[1].trim()) return matchHeader[1].replace(/^[\s:–-]+/, '').trim();
+    return undefined;
   };
 
   const grabScript = (label) => {
     const fence = String.fromCharCode(96).repeat(3);
-    const match = text.match(
-      new RegExp(`\\*\\*${escapeRegex(label)}:\\*\\*\\s*\\n+${fence}(?:sql)?\\s*\\n([\\s\\S]*?)${fence}`),
+    const matchExplicit = text.match(
+      new RegExp(`\\*\\*${escapeRegex(label)}[^*]*\\*\\*\\s*(?:\\r?\\n)+${fence}(?:sql)?\\s*\\r?\\n([\\s\\S]*?)${fence}`),
     );
-    return match ? match[1].trim() : undefined;
+    if (matchExplicit) return matchExplicit[1].trim();
+
+    const alt = label === 'Script ANTES' ? 'Problema (ANTES)' : 'Solução (DEPOIS)';
+    const matchAlt = text.match(
+      new RegExp(`\\*\\*${escapeRegex(alt)}[^*]*\\*\\*[\\s\\S]*?${fence}(?:sql)?\\s*\\r?\\n([\\s\\S]*?)${fence}`),
+    );
+    if (matchAlt) return matchAlt[1].trim();
+
+    return undefined;
   };
 
   const problem = grab('Problema (ANTES)');

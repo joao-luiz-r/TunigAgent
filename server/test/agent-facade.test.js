@@ -139,6 +139,46 @@ test('createSkill registra skill nova com source factory', async () => {
   assert.equal(created.source, 'factory');
   assert.ok(env.skillRegistry.get('skill_api_nova'));
   assert.ok(env.skillRepository.documents.some((d) => d.name === 'skill_api_nova'));
+
+  // Teste com payload sem campos opcionais e com regras de detecção
+  const minimal = await facade.createSkill({
+    name: 'skill_minimal',
+    detectionRules: { type: 'custom' },
+    recommendationTemplate: 'rec template',
+  });
+  assert.equal(minimal.name, 'skill_minimal');
+});
+
+test('act, feedback e getState operam ciclo completo com sucesso na facade', async () => {
+  const env = buildHarnessEnvironment();
+  const facade = new AgentFacade({
+    sessionManager: env.sessionManager,
+    harness: env.harness,
+    skillRegistry: env.skillRegistry,
+    skillLoader: env.skillLoader,
+  });
+
+  // startSession sem argumento (default para auto)
+  const session = await facade.startSession();
+  assert.ok(session.sessionId);
+
+  // act com mensagem válida
+  const actState = await facade.act(session.sessionId, 'minha query usa SELECT * e fica lenta');
+  assert.equal(actState.state, 'AGUARDANDO_DADO');
+  assert.ok(actState.pendingTool);
+
+  // getState da sessão ativa
+  const currentState = await facade.getState(session.sessionId);
+  assert.equal(currentState.sessionId, session.sessionId);
+  assert.equal(currentState.state, 'AGUARDANDO_DADO');
+
+  // feedback com resultado de tool
+  const finalState = await facade.feedback(
+    session.sessionId,
+    ['texto_consulta | execucoes', '--------------|----------', 'SELECT * FROM T | 5'].join('\n'),
+  );
+  assert.equal(finalState.state, 'CONCLUIDO');
+  assert.equal(finalState.status, 'COMPLETED');
 });
 
 test('SessionManager complete e remove mantém fluxo do cache', () => {

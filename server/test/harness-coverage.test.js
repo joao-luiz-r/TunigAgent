@@ -2,6 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHarnessEnvironment } from './helpers.js';
 import { Skill } from '../src/domain/entities/skill.js';
+import { buildHarnessSystemPrompt, isolateUserData } from '../src/application/harness/prompt-builder.js';
+import { DataChangeDetector } from '../src/application/harness/data-change-detector.js';
+import { SkillHandoffDetector } from '../src/application/harness/skill-handoff-detector.js';
+import { createGetSkillDetailsTool, normalizeNames } from '../src/application/tools/get-skill-details.tool.js';
+import { SkillMatcher, buildSkillSignatures } from '../src/application/skills/skill-matcher.js';
 
 class UnknownToolLlm {
   async createChatCompletion({ system, messages }) {
@@ -168,4 +173,136 @@ const FACTORY_ANSWERS = [
   'preciso do plano de execucao e do schema da tabela',
   'criar um indice filtrado com WHERE coluna IS NULL',
   'CREATE INDEX ix ON dbo.T (c) WHERE c IS NULL;',
+  'indice filtrado, is null, coluna is null',
 ];
+
+test('analyzerExtraSkills captura erro de analyzeSql e retorna []', () => {
+  const { harness } = buildHarnessEnvironment();
+  const throwing = { toString() { throw new Error('boom'); } };
+  const result = harness.analyzerExtraSkills(throwing);
+  assert.deepEqual(result, []);
+});
+
+test('runDiagnosticLoop faz fallback carregando skill + general_tuning quando loadedSkills vazio', async () => {
+  const { harness, sessionManager } = buildHarnessEnvironment();
+  const session = sessionManager.create('avoid_select_star');
+  session.loadedSkills = [];
+  session.history.push({ role: 'user', content: 'minha query usa SELECT * e está lenta' });
+  await harness.runDiagnosticLoop(session);
+  assert.deepEqual(session.loadedSkills, ['avoid_select_star', 'general_tuning']);
+  assert.ok(session.pendingTool, 'deveria pausar na primeira tool');
+});
+
+test('prompt-builder: cobre variações de loadedSkills, skill legado e isolateUserData', () => {
+  const { skillRegistry } = buildHarnessEnvironment();
+
+  // loadedSkills vazio
+  const p1 = buildHarnessSystemPrompt({ skillRegistry, loadedSkills: [] });
+  assert.match(p1, /\[skill_name: general_tuning\]/);
+
+  // skill legado
+  const dummySkill = skillRegistry.get('avoid_select_star');
+  const p2 = buildHarnessSystemPrompt({ skillRegistry, skill: dummySkill });
+  assert.match(p2, /\[skill_name: avoid_select_star\]/);
+
+  // apenas skillRegistry (sem skill, sem loadedSkills, sem routeHint)
+  const p3 = buildHarnessSystemPrompt({ skillRegistry });
+  assert.match(p3, /\[skill_name: general_tuning\]/);
+
+  // loadedSkills com 1 item e sem routeHint
+  const p4 = buildHarnessSystemPrompt({ skillRegistry, loadedSkills: [dummySkill] });
+  assert.match(p4, /\[skill_name: avoid_select_star\]/);
+
+  // isolateUserData com papéis e formatos variados
+  const isolated = isolateUserData([
+    { role: 'assistant', content: 'resposta' },
+    { role: 'user', content: 12345 },
+    { role: 'user', content: null },
+    { role: 'user', content: 'minha query' },
+  ]);
+  assert.equal(isolated[0].content, 'resposta');
+  assert.equal(isolated[1].content, 12345);
+  assert.equal(isolated[2].content, null);
+  assert.match(isolated[3].content, /\[\[DADOS_DO_USUARIO_INICIO\]\]/);
+});
+
+test('DataChangeDetector: cobre mensagens vazias, apenas objeto, apenas mudança ou ambos', () => {
+  const detector = new DataChangeDetector();
+  assert.equal(detector.detect(null), false);
+  assert.equal(detector.detect(''), false);
+  assert.equal(detector.detect('o schema da tabela clientes'), false);
+  assert.equal(detector.detect('executei o script no banco'), false);
+  assert.equal(detector.detect('criei o indice na tabela'), true);
+});
+
+test('SkillHandoffDetector: cobre entradas nulas, vazias e textos sem marcador', () => {
+  const detector = new SkillHandoffDetector();
+  assert.equal(detector.detect(null), null);
+  assert.equal(detector.detect(''), null);
+  assert.equal(detector.detect('texto sem marcador'), null);
+  assert.equal(detector.strip(null), '');
+  assert.equal(detector.strip('texto normal'), 'texto normal');
+  assert.equal(detector.strip('texto com [SKILL_HANDOFF: create_assertive_index] marcador'), 'texto com  marcador');
+});
+
+test('get-skill-details tool: cobre computeKey, fallback sem getSkill e variações de normalizeNames', () => {
+  const toolSemSkill = createGetSkillDetailsTool();
+  assert.deepEqual(toolSemSkill.resolve(['avoid_select_star']), []);
+
+  const key1 = toolSemSkill.computeKey({ skills: ['avoid_wildcard_prefix', 'avoid_select_star'] });
+  const key2 = toolSemSkill.computeKey({ skills: ['avoid_select_star', 'avoid_wildcard_prefix'] });
+  assert.equal(key1, key2, 'computeKey deve ser determinístico e ordenar nomes');
+
+  assert.deepEqual(normalizeNames(null), []);
+  assert.deepEqual(normalizeNames(['  a  ', '', 123, 'b']), ['a', 'b']);
+  assert.deepEqual(normalizeNames({ skills: ['x'] }), ['x']);
+  assert.deepEqual(normalizeNames({ names: ['y'] }), ['y']);
+  assert.deepEqual(normalizeNames({ skill: 'z' }), ['z']);
+  assert.deepEqual(normalizeNames({ name: 'w' }), ['w']);
+  assert.deepEqual(normalizeNames({}), []);
+});
+
+test('SkillMatcher: cobre normalize, mensagens vazias e assinaturas com termos curtos/vazios', () => {
+  const { skillRegistry } = buildHarnessEnvironment();
+  const matcher = new SkillMatcher({ skillRegistry });
+
+  assert.equal(matcher.normalize('Texto Com Acentuação!'), 'texto com acentuacao!');
+  assert.equal(matcher.match(''), null);
+  assert.equal(matcher.match('   '), null);
+
+  const emptySkill = new Skill({
+    name: 'skill_sem_keywords',
+    description: 'desc',
+    systemPrompt: 'prompt',
+    keywords: [],
+    source: 'fixed',
+  });
+  const sigs = buildSkillSignatures([emptySkill]);
+  assert.deepEqual(sigs[0].terms, []);
+});
+
+test('Harness: cobre branches de ensureLoadedSkills, analyzerExtraSkills e resolveSkillDetailsCall', async () => {
+  const { harness, sessionManager, toolRegistry } = buildHarnessEnvironment();
+  const session = sessionManager.create('avoid_select_star');
+
+  // ensureLoadedSkills com valores nulos, duplicados, skill inexistente e factory
+  harness.ensureLoadedSkills(session, [null, '', 'avoid_select_star', 'skill_inexistente', 'skill_factory']);
+  assert.deepEqual(session.loadedSkills, ['avoid_select_star']);
+
+  // analyzerExtraSkills com mensagens e títulos diversos
+  const extras = harness.analyzerExtraSkills('SELECT 1');
+  assert.ok(Array.isArray(extras));
+
+  // resolveSkillDetailsCall quando a tool get_skill_details é removida do toolRegistry
+  const call = {
+    id: 'call_1',
+    function: { name: 'get_skill_details', arguments: JSON.stringify({ skills: ['avoid_select_star'] }) },
+  };
+  const originalGet = toolRegistry.get.bind(toolRegistry);
+  toolRegistry.get = (name) => (name === 'get_skill_details' ? null : originalGet(name));
+  await harness.resolveSkillDetailsCall(session, call);
+  toolRegistry.get = originalGet;
+
+  const toolMsg = session.history[session.history.length - 1];
+  assert.equal(toolMsg.role === 'tool' && JSON.parse(toolMsg.content).skills.length, 0);
+});

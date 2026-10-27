@@ -78,12 +78,13 @@ export function buildHarnessEnvironment({ llm } = {}) {
   const sessionManager = new SessionManager({ sessionCache, repository });
 
   const toolRegistry = new ToolRegistry();
-  registerAllTools(toolRegistry);
 
   const skillRegistry = new SkillRegistry();
   const skillRepository = new InMemoryRepository();
   const skillLoader = new SkillLoader({ repository: skillRepository, registry: skillRegistry });
   skillLoader.loadFixed();
+
+  registerAllTools(toolRegistry, { skillRegistry });
 
   const contextManager = new ContextManager({ maxTokens: 12000 });
   const interviewController = new InterviewController({ llm: memoryLlm });

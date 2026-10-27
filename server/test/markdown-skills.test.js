@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { splitFrontmatter, parseScalar, FrontmatterParseError } from '../src/application/skills/frontmatter.js';
 import { skillFromMarkdown, loadFixedSkillsFromMarkdown } from '../src/application/skills/skill-md-loader.js';
-import { buildSkillCatalog } from '../src/application/skills/skill-catalog.js';
+import { skillToMarkdown } from '../src/application/skills/skill-md-writer.js';
+import { buildSkillCatalog, buildCompactSkillCatalog, buildFullSkillDetails } from '../src/application/skills/skill-catalog.js';
 import { SkillRegistry } from '../src/application/skills/skill-registry.js';
 
 const SAMPLE_MD = [
@@ -110,6 +111,46 @@ test('buildSkillCatalog atualiza automaticamente quando nova skill é registrada
     skillFromMarkdown('---\nname: nova_skill_teste\n---\n# Skill: nova_skill_teste\n\n## Instruções\n\nSkill nova.'),
   );
   assert.match(buildSkillCatalog(registry), /nova_skill_teste/);
+});
+
+test('buildCompactSkillCatalog lista só cabeçalhos (1 linha por skill, sem scripts)', () => {
+  const registry = new SkillRegistry();
+  registry.register(skillFromMarkdown(SAMPLE_MD));
+  registry.register(
+    skillFromMarkdown('---\nname: skill_factory\nisFactory: true\n---\n# Skill: skill_factory\n\n## Instruções\n\nConduz a factory.'),
+  );
+
+  const compact = buildCompactSkillCatalog(registry);
+  assert.match(compact, /# Catálogo de Skills/);
+  assert.match(compact, /avoid_select_star/);
+  assert.doesNotMatch(compact, /skill_factory/);
+  assert.doesNotMatch(compact, /```/);
+  assert.doesNotMatch(compact, /SELECT \* FROM Pedidos/);
+  assert.ok(compact.length < buildSkillCatalog(registry).length / 2, 'compacto deveria ser bem menor que o completo');
+});
+
+test('buildFullSkillDetails entrega o manual de UMA skill', () => {
+  const skill = skillFromMarkdown(SAMPLE_MD);
+  const details = buildFullSkillDetails(skill);
+  assert.match(details, /## avoid_select_star/);
+  assert.match(details, /Sua missão é detectar SELECT \*/);
+  assert.match(details, /SELECT \* FROM Pedidos;/);
+  assert.match(details, /Substituir SELECT \* por colunas explícitas/);
+  assert.match(details, /get_query_text/);
+});
+
+test('skillToMarkdown faz round-trip com skillFromMarkdown', () => {
+  const skill = skillFromMarkdown(SAMPLE_MD);
+  const markdown = skillToMarkdown(skill);
+  assert.match(markdown, /^---\nname: avoid_select_star\n/);
+  assert.doesNotMatch(markdown, /^source:/m);
+  const reparsed = skillFromMarkdown(markdown);
+  assert.equal(reparsed.name, 'avoid_select_star');
+  assert.deepEqual(reparsed.toolsRequired, ['get_query_text']);
+  assert.equal(reparsed.pattern.problem, 'Consulta usa SELECT *.');
+  assert.equal(reparsed.pattern.beforeScript, 'SELECT * FROM Pedidos;');
+  assert.equal(reparsed.pattern.afterScript, 'SELECT Id FROM Pedidos;');
+  assert.equal(reparsed.recommendationTemplate, 'Substituir SELECT * por colunas explícitas da tabela {tabela}.');
 });
 
 test('splitFrontmatter trata corpo sem frontmatter como attributes vazios', () => {

@@ -13,6 +13,15 @@ const TOOL_KEYWORDS = [
   { keywords: ['funcao', 'função', 'udf', 'inlineable', 'is_inlineable', 'procedimento'], toolName: 'get_object_metadata' },
 ];
 
+export function parseKeywords(raw) {
+  return String(raw || '')
+    .split(/[,;\n]+/)
+    .map((keyword) => keyword.trim().toLowerCase())
+    .filter((keyword) => keyword.length > 1)
+    .filter((keyword, index, all) => all.indexOf(keyword) === index)
+    .slice(0, 20);
+}
+
 export class SkillGenerator {
   constructor({ llm, toolRegistry }) {
     this.llm = llm;
@@ -31,9 +40,11 @@ export class SkillGenerator {
     return names.filter((name) => this.toolRegistry.has(name));
   }
 
-  async generate(answers) {
+  async generate(answers, { beforeScript } = {}) {
     const name = String(answers.name || 'nova_skill').trim() || 'nova_skill';
     const toolsRequired = this.inferTools(answers.dataNeeded);
+    const keywords = parseKeywords(answers.keywords);
+    const originScript = String(beforeScript || '').trim().slice(0, 4000);
     const fallback = new Skill({
       name,
       description: answers.trigger || 'Técnica de otimização ensinada pelo usuário.',
@@ -41,13 +52,14 @@ export class SkillGenerator {
       toolsRequired,
       detectionRules: { type: 'custom', trigger: answers.trigger || '' },
       recommendationTemplate: answers.recommendation || '',
-      pattern: this.buildFallbackPattern(answers),
+      pattern: this.buildFallbackPattern(answers, originScript),
+      keywords,
       source: 'factory',
     });
     try {
       const generated = await this.llm.chatJson({
         system: [AGENT_PERSONA, SKILL_GENERATOR_PROMPT].join('\n\n'),
-        messages: [{ role: 'user', content: JSON.stringify(answers) }],
+        messages: [{ role: 'user', content: JSON.stringify({ ...answers, beforeScript: originScript || undefined }) }],
       });
       return new Skill({
         name,
@@ -57,6 +69,7 @@ export class SkillGenerator {
         detectionRules: generated.detectionRules || fallback.detectionRules,
         recommendationTemplate: generated.recommendationTemplate || fallback.recommendationTemplate,
         pattern: generated.pattern || fallback.pattern,
+        keywords: generated.keywords && generated.keywords.length > 0 ? generated.keywords : keywords,
         source: 'factory',
       });
     } catch {
@@ -77,11 +90,13 @@ export class SkillGenerator {
     ].join(' ');
   }
 
-  buildFallbackPattern(answers) {
+  buildFallbackPattern(answers, originScript = '') {
     return {
       problem: answers.trigger || 'Técnica de otimização ensinada pelo usuário.',
       solution: answers.recommendation || 'Aplicar a técnica recomendada.',
-      beforeScript: answers.script || '',
+      // O ANTES vem do SQL de origem da sessão (capturado, nunca inventado).
+      // Sem origem, fica vazio em vez de duplicar o script de correção.
+      beforeScript: originScript,
       afterScript: answers.script || '',
       reason: 'Técnica ensinada pelo usuário através da Skill Factory.',
     };

@@ -31,3 +31,8 @@ Roteiro de perguntas feito ao usuário para transformar uma técnica de otimiza�
 
 **Pergunta:** Você tem um script SQL modelo para verificar ou corrigir esse problema?
 **Obrigatória:** não
+
+## keywords
+
+**Pergunta:** Quais palavras-chave disparam essa técnica? (ex: outer apply, subselect correlacionado, top 1)
+**Obrigatória:** sim

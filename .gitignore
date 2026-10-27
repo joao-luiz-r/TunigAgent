@@ -2,6 +2,9 @@ node_modules/
 dist/
 build/
 .env
+.env*
+*.bak
+APIKey.txt
 *.log
 .DS_Store
 coverage/

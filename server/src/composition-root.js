@@ -39,10 +39,11 @@ export async function buildApp() {
   const llm = createLlmClient(config);
   const contextManager = new ContextManager({ maxTokens: config.maxContextTokens });
 
-  const toolRegistry = new ToolRegistry();
-  registerAllTools(toolRegistry);
-
   const skillRegistry = new SkillRegistry();
+
+  const toolRegistry = new ToolRegistry();
+  registerAllTools(toolRegistry, { skillRegistry });
+
   const skillLoader = new SkillLoader({ repository: skillRepository, registry: skillRegistry });
   skillLoader.loadFixed();
   await skillLoader.loadDynamic();

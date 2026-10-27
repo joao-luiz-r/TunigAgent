@@ -61,14 +61,23 @@ test('isolateUserData envolve conteúdo do usuário em marcadores de dados', () 
   assert.equal(isolated[2].content, '{}');
 });
 
-test('buildHarnessSystemPrompt inclui persona, catálogo, harness e skill ativa', () => {
+test('buildHarnessSystemPrompt inclui persona, catálogo compacto, harness e manuais carregados', () => {
   const { harness, skillRegistry } = buildHarnessEnvironment();
   const skill = skillRegistry.get('avoid_select_star');
   const prompt = buildHarnessSystemPrompt({ skill, skillRegistry });
   assert.match(prompt, /\[skill_name: avoid_select_star\]/);
-  assert.match(prompt, /Catálogo de Skills Disponíveis/);
+  assert.match(prompt, /\[loaded_skills: avoid_select_star\]/);
+  assert.match(prompt, /# Catálogo de Skills/);
   assert.match(prompt, /Definição do Harness/);
   assert.match(prompt, /Proibi[çc][aã]o de Suposi[cç][oõ]es/i);
+  assert.match(prompt, /get_skill_details/);
+  // Manual da skill carregada vai junto...
+  assert.match(prompt, /Sua missão é detectar/);
+  assert.match(prompt, /Script DEPOIS/);
+  assert.match(prompt, /PedidoId, ClienteId, Valor FROM Pedidos/);
+  // ...mas o manual das demais skills NÃO (só o cabeçalho de 1 linha).
+  assert.doesNotMatch(prompt, /FROM Dealer/);
+  assert.match(prompt, /avoid_wildcard_prefix/);
 });
 
 test('harness.md orienta invalidar dados coletados após mudança', () => {
@@ -163,7 +172,7 @@ test('mensagem de criação de skill em sessão ativa ativa Skill Factory', asyn
   const state = await harness.handleAct(session.sessionId, 'Quero criar uma nova skill para detectar empilhar scans');
   assert.equal(state.state, 'AGUARDANDO_DADO');
   assert.ok(state.interview, 'entrevista deveria começar');
-  assert.equal(state.interview.totalSteps, 5);
+  assert.equal(state.interview.totalSteps, 6);
 });
 
 test('sessão auto: mensagem com SELECT * seleciona avoid_select_star', async () => {
@@ -213,4 +222,8 @@ test('handoff troca a skill ativa para create_assertive_index na resposta final'
   const state = await harness.handleFeedback(session.sessionId, tabular);
   assert.equal(state.skillName, 'create_assertive_index', 'skill deveria ter feito handoff');
   assert.ok(skillRegistry.get('create_assertive_index'));
+  assert.ok(
+    state.loadedSkills.includes('avoid_non_sargable_predicate') && state.loadedSkills.includes('create_assertive_index'),
+    'handoff deveria ACUMULAR a skill (multi-skill), não trocar',
+  );
 });

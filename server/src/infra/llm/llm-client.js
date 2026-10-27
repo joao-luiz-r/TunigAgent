@@ -12,7 +12,7 @@ export class DeepSeekClient {
   async createChatCompletion({ system, messages, tools }) {
     const body = { model: this.model, messages: [], stream: false };
     if (system) body.messages.push({ role: 'system', content: system });
-    body.messages.push(...messages);
+    body.messages.push(...this.ensureUserTurnLast(messages));
     if (tools && tools.length) {
       body.tools = tools;
       body.tool_choice = 'auto';
@@ -40,6 +40,22 @@ export class DeepSeekClient {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /**
+   * Alguns provedores (ex: Gemini) rejeitam payloads terminados em turno do
+   * modelo ("Requests ending with a model turn are not supported"). O harness
+   * pode continuar o loop após uma mensagem de assistant (handoff), então o
+   * transporte adiciona um estímulo de continuação SÓ no payload de envio —
+   * o histórico da sessão permanece intacto.
+   */
+  ensureUserTurnLast(messages) {
+    const outgoing = [...(messages || [])];
+    const last = outgoing[outgoing.length - 1];
+    if (last && last.role === 'assistant') {
+      outgoing.push({ role: 'user', content: 'Continue a análise a partir do histórico.' });
+    }
+    return outgoing;
   }
 
   async chatJson({ system, messages }) {

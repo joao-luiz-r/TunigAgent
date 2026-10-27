@@ -12,14 +12,14 @@ Agente autônomo de tuning para SQL Server baseado em LLM e catálogo de habilid
 
 ---
 
-## 🧭 Índice de Regras por Escopo (Progressive Disclosure)
+## 🧭 Índice de Regras por Domínio (Progressive Disclosure)
 
-Consulte as regras detalhadas de cada domínio antes de implementar:
+Consulte as diretrizes específicas de cada domínio antes de implementar:
 
 | Domínio | Escopo | Arquivo de Regras |
 | :--- | :--- | :--- |
-| **Backend & Harness** | Node.js, Clean Arch, LLM Client, Skills & Tools | [server/GEMINI.md](file:///server/GEMINI.md) |
-| **Frontend & UI** | React 18, Vite, Estados de Sessão, Tema & UX | [client/GEMINI.md](file:///client/GEMINI.md) |
+| **Backend & Harness** | Node.js, Clean Arch, LLM Client, Skills & Tools | [.agents/rules/backend.md](file:///.agents/rules/backend.md) |
+| **Frontend & UI** | React 18, Vite, Estados de Sessão, Tema & UX | [.agents/rules/frontend.md](file:///.agents/rules/frontend.md) |
 | **Especificações** | Arquitetura completa, glossário e fluxos | [ESPECIFICACOES.md](file:///ESPECIFICACOES.md) |
 | **Roadmap de Fases** | Fases 1 a 5 e status de entregas | [todo.md](file:///todo.md) |
 

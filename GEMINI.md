@@ -4,6 +4,22 @@ Agente autônomo de tuning para SQL Server baseado em LLM e catálogo de habilid
 
 ---
 
+## 🌐 Resolução de Ambiguidade de Domínio (Produto vs. IDE)
+
+Este projeto constrói um agente inteligente (`TunigAgent`). Para evitar colisão entre as entidades do **Produto** e as ferramentas de **Desenvolvimento (Antigravity)**:
+
+| Conceito | Domínio do Produto (`TunigAgent`) | Domínio de Desenvolvimento (`Antigravity / IDE`) |
+| :--- | :--- | :--- |
+| **Skills** | Técnicas de diagnóstico SQL Server (`server/src/application/skills/fixed/*.skill.md`) | Automações e runbooks da IDE em `.agents/skills/<name>/SKILL.md` |
+| **Tools** | Geradores de scripts T-SQL (`server/src/application/tools/`) executados pelo usuário | Comandos da IDE (`run_command`, `replace_file_content`, browser) |
+| **Harness** | Orquestrador de conversação de tuning (`server/src/application/harness/harness.js`) | Runtime do assistente de IA da IDE |
+| **Sessão** | Análise de uma query SQL submetida pelo usuário final | Janela de chat aberta entre você e o assistente de código |
+
+> [!IMPORTANT]
+> **Regra de Contexto Padrão:** Qualquer menção a *"Skill"*, *"Tool"*, *"Harness"* ou *"Sessão"* refere-se ao **Produto (TunigAgent)**, a menos que venha explicitamente qualificada com "Antigravity", "IDE" ou "Meta".
+
+---
+
 ## 🔒 Guardrails Universais
 1. **Zero Conexão Direta ao Banco:** O agente NUNCA deve solicitar ou armazenar string de conexão com o SQL Server. Todas as coletas são feitas exclusivamente via scripts T-SQL gerados para o usuário executar.
 2. **Segurança de Credenciais:** Nunca commite chaves de API, arquivos `.env*` ou backups (`*.bak`). Mantenha [.gitignore](file:///.gitignore) estritamente atualizado.

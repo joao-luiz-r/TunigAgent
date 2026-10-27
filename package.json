@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Agente de tuning SQL Server com LLM DeepSeek",
+  "type": "module",
   "workspaces": [
     "server",
     "client"
@@ -14,6 +15,7 @@
     "build:client": "npm run build --workspace client",
     "preview:client": "npm run preview --workspace client",
     "test": "npm run test --workspace server",
-    "test:coverage": "npm run test:coverage --workspace server"
+    "test:coverage": "npm run test:coverage --workspace server",
+    "preview:md": "node scripts/md-preview.js"
   }
 }
